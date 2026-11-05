@@ -1,0 +1,211 @@
+﻿{% extends "tracker/base.html" %}
+{% block title %}トレード登録{% endblock %}
+
+{% block head_extra %}
+<style>
+  .form-wrap {
+    max-width: 900px;
+    margin: 24px auto;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 32px 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .form-wrap h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin: 0 0 6px;
+  }
+
+  .form-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* ===== 2列グリッド ===== */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 28px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field.full {
+    grid-column: 1 / -1;
+  }
+
+  /* 備考など全幅にしたい欄 */
+
+  .field label {
+    font-size: 1.05rem;
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: 6px;
+    width: auto;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 11px 14px;
+    background: #1e1e2e;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(137, 180, 250, .25);
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  #id_ticker {
+    text-transform: uppercase;
+  }
+
+  #id_quantity,
+  #id_price,
+  #id_fee {
+    text-align: right;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #6b6b80;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    justify-content: center;
+    margin-top: 28px;
+  }
+
+  .form-actions .btn-primary {
+    font-size: 1.15rem;
+    padding: 12px 44px;
+  }
+
+  .form-actions .cancel {
+    font-size: 1.05rem;
+    color: var(--muted);
+  }
+
+  .errorlist {
+    color: var(--red);
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 0;
+    font-size: .85rem;
+  }
+
+  /* スマホは1列に */
+  @media (max-width: 680px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-wrap {
+      padding: 24px 20px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+  <h1>＋ 新規トレード登録</h1>
+  <p class="form-note">
+    市場（日本株/米国株）と通貨は銘柄コードから自動判定されます。<br>
+    銘柄コードを入力して欄を離れると、銘柄名が自動入力されます（空欄の場合のみ）。
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid">
+      <div class="field">
+        <label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+        {{ form.date }}{{ form.date.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.side.id_for_label }}">{{ form.side.label }}</label>
+        {{ form.side }}{{ form.side.errors }}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.ticker.id_for_label }}">{{ form.ticker.label }}</label>
+        {{ form.ticker }}{{ form.ticker.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}{{ form.name.errors }}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}</label>
+        {{ form.quantity }}{{ form.quantity.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.price.id_for_label }}">{{ form.price.label }}</label>
+        {{ form.price }}{{ form.price.errors }}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.fee.id_for_label }}">{{ form.fee.label }}</label>
+        {{ form.fee }}{{ form.fee.errors }}
+      </div>
+      <div class="field"><!-- 空きセル（4行目の右） --></div>
+
+      <div class="field full">
+        <label for="{{ form.note.id_for_label }}">{{ form.note.label }}</label>
+        {{ form.note }}{{ form.note.errors }}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">保存</button>
+      {% url 'trade_list' %}キャンセル</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  const t = document.getElementById("id_ticker");
+  const n = document.getElementById("id_name");
+  if (t && n) {
+    t.addEventListener("blur", async () => {
+      if (!t.value || n.value) return;
+      try {
+        const r = await fetch(`/api/lookup/?ticker=${encodeURIComponent(t.value)}`);
+        const d = await r.json();
+        t.value = t.value.toUpperCase();
+        if (d.name) n.value = d.name;
+      } catch (e) {
+        console.error("lookup failed:", e);
+      }
+    });
+  }
+</script>
+{% endblock %}

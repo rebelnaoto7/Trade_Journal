@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>トレード登録 | トレードジャーナル</title>
+    <style>
+        :root {
+            --bg: #181825;
+            --bg-elev: #1e1e2e;
+            --card: #242438;
+            --card-2: #2a2a40;
+            --line: #393956;
+            --line-soft: #2f2f47;
+            --text: #cdd6f4;
+            --text-dim: #a6adc8;
+            --muted: #7f849c;
+            --green: #a6e3a1;
+            --red: #f38ba8;
+            --yellow: #f9e2af;
+            --blue: #89b4fa;
+            --sapphire: #74c7ec;
+            --mauve: #cba6f7;
+            --peach: #fab387;
+            --radius: 14px;
+            --radius-sm: 9px;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.25);
+            --ring: 0 0 0 3px rgba(137, 180, 250, 0.28);
+            --font: "Meiryo UI", "Meiryo", "Segoe UI", system-ui, sans-serif;
+            --maxw: 1180px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(1100px 500px at 80% -10%, rgba(137, 180, 250, 0.10), transparent 60%),
+                radial-gradient(900px 500px at -10% 10%, rgba(203, 166, 247, 0.08), transparent 55%),
+                var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 24px;
+            background: rgba(24, 24, 37, 0.78);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--line-soft);
+        }
+
+        .nav .brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 16px;
+        }
+
+        .nav .brand .logo {
+            font-size: 1.35rem;
+        }
+
+        .nav .links {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav .links a {
+            color: var(--text-dim);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: .95rem;
+            font-weight: 600;
+        }
+
+        .nav .links a:hover {
+            background: var(--card);
+            color: var(--text);
+        }
+
+        .nav .links a.active {
+            background: var(--blue);
+            color: #11111b;
+        }
+
+        .nav .spacer {
+            flex: 1;
+        }
+
+        .nav .user {
+            color: var(--muted);
+            font-size: .9rem;
+            margin-right: 6px;
+        }
+
+        .container {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding: 28px 24px 64px;
+        }
+
+        .page-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+        }
+
+        .page-head h1 {
+            font-size: 1.7rem;
+            margin: 0;
+            font-weight: 800;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            padding: 10px 18px;
+            font-size: .95rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all .15s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            border-color: var(--blue);
+            transform: translateY(-1px);
+        }
+
+        .btn--primary {
+            background: linear-gradient(135deg, var(--blue), var(--sapphire));
+            color: #0b1020;
+            border: none;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn--ghost {
+            background: transparent;
+        }
+
+        .btn--sm {
+            padding: 6px 12px;
+            font-size: .85rem;
+            border-radius: 9px;
+        }
+
+        .btn--lg {
+            padding: 13px 34px;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: linear-gradient(180deg, var(--card), var(--bg-elev));
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .input {
+            width: 100%;
+            font-size: 1.05rem;
+            font-family: inherit;
+            padding: 11px 14px;
+            color: var(--text);
+            background: var(--bg-elev);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: var(--ring);
+        }
+
+        .input--num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .input--ticker {
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            font-weight: 700;
+        }
+
+        textarea.input {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        ::placeholder {
+            color: #5c5f7a;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .field>label {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .field .status {
+            font-size: .82rem;
+            margin-top: 4px;
+            min-height: 1em;
+        }
+
+        .field .status.ok {
+            color: var(--green);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px 26px;
+        }
+
+        .form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            justify-content: center;
+            margin-top: 26px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 620px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="nav">
+        <span class="brand"><span class="logo">📈</span> トレードジャーナル</span>
+        <span class="links">
+            <a href="#" class="">一覧</a>
+            <a href="#" class="active">新規登録</a>
+            <a href="#" class="">分析</a>
+        </span>
+        <span class="spacer"></span>
+        <span class="user">👤 demo</span>
+        <button class="btn btn--ghost btn--sm">ログアウト</button>
+    </nav>
+
+    <main class="container">
+        <div class="card" style="max-width:860px; margin:18px auto;">
+            <div class="page-head" style="justify-content:center; margin-bottom:6px;">
+                <h1>＋ 新規トレード登録</h1>
+            </div>
+            <p style="text-align:center; color:var(--muted); font-size:.9rem; margin:0 0 22px;">
+                市場・通貨は銘柄コードから自動判定されます。コードを入力して欄を離れると銘柄名を自動取得します。
+            </p>
+
+            <form>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>約定日時</label>
+                        <input type="datetime-local" value="2026-06-27T10:03" class="input">
+                    </div>
+                    <div class="field">
+                        <label>売買</label>
+                        <select class="input">
+                            <option>買</option>
+                            <option>売</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>銘柄コード/Ticker</label>
+                        <input type="text" value="7203" class="input input--ticker">
+                        <span class="status ok">✓ 日本株 / JPY</span>
+                    </div>
+                    <div class="field">
+                        <label>銘柄名</label>
+                        <input type="text" value="Toyota Motor Corporation" class="input">
+                    </div>
+                    <div class="field">
+                        <label>数量</label>
+                        <input type="number" value="100" class="input input--num">
+                    </div>
+                    <div class="field">
+                        <label>価格</label>
+                        <input type="number" value="2500" class="input input--num">
+                    </div>
+                    <div class="field">
+                        <label>手数料</label>
+                        <input type="number" value="0" class="input input--num">
+                    </div>
+                    <div class="field"></div>
+                    <div class="field full">
+                        <label>備考</label>
+                        <textarea class="input" placeholder="（任意）メモ・根拠など"></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn--primary btn--lg">保存</button>
+                    <button type="button" class="btn">保存して続けて追加</button>
+                    <a href="#" class="btn btn--ghost">キャンセル</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+
+</html>

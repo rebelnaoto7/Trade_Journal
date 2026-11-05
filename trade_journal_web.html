@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📈 株式トレードジャーナル JP / US</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#1e1e2e; --card:#282838; --line:#444;
+    --green:#a6e3a1; --red:#f38ba8; --yellow:#f1fa8c;
+    --blue:#89b4fa; --purple:#cba6f7; --text:#cdd6f4; --muted:#888;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Meiryo UI","Meiryo",sans-serif; padding:24px;
+  }
+  h1{font-size:1.6rem; margin:0 0 4px;}
+  .sub{color:var(--muted); font-size:.85rem; margin-bottom:20px;}
+  .toolbar{
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:20px;
+  }
+  .btn{
+    background:var(--card); color:var(--text); border:1px solid var(--line);
+    padding:8px 16px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:.85rem;
+  }
+  .btn:hover{border-color:var(--blue);}
+  /* ---- 上部サマリー ---- */
+  .top-row{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;}
+  .stat{
+    background:var(--card); border:2px solid #3a3a4a; border-radius:10px;
+    padding:14px; text-align:center;
+  }
+  .stat .label{color:var(--muted); font-size:.8rem;}
+  .stat .value{font-size:1.5rem; font-weight:bold; margin-top:4px;}
+  /* ---- 通貨カード ---- */
+  .cards{display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px;}
+  .ccard{background:var(--card); border:2px solid #3a3a4a; border-radius:12px; padding:18px;}
+  .ccard h2{font-size:1.1rem; margin:0 0 14px; text-align:center;}
+  .crow{display:flex; justify-content:space-between; padding:6px 4px; border-bottom:1px solid #33334a;}
+  .crow .k{color:var(--muted); font-size:.85rem;}
+  .crow .v{font-weight:bold; font-size:1rem;}
+  .pf-eval{text-align:center; margin-top:12px; color:var(--yellow); font-size:.9rem;}
+  .nodata{text-align:center; color:var(--muted); padding:30px 0;}
+  /* ---- グラフ ---- */
+  .charts{display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px;}
+  .chartbox{background:var(--card); border:2px solid #3a3a4a; border-radius:12px; padding:14px;}
+  .chartbox h3{font-size:.95rem; margin:0 0 10px; text-align:center;}
+  /* ---- テーブル ---- */
+  table{width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden;}
+  th,td{padding:9px 10px; font-size:.82rem; text-align:center; border-bottom:1px solid #33334a;}
+  th{background:#30304a; color:var(--text);}
+  tr:hover td{background:#2e2e44;}
+  .buy{color:var(--green);} .sell{color:var(--red);}
+  @media(max-width:780px){
+    .top-row,.cards,.charts{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+  <h1>📈 株式トレードジャーナル <span style="color:var(--muted)">JP / US</span></h1>
+  <div class="sub">日本株・米国株の売買履歴と勝率・プロフィットファクター（PF）・銘柄別損益を可視化する Web 版</div>
+
+  <div class="toolbar">
+    <button class="btn" onclick="document.getElementById('csv').click()">📂 CSVを読み込む</button>
+    <input type="file" id="csv" accept=".csv" style="display:none" onchange="loadCsv(this.files[0])">
+    <span class="sub" style="margin:0">列: 日付,市場,銘柄コード/Ticker,銘柄名,売買,数量,価格,通貨,手数料,備考</span>
+  </div>
+
+  <div class="top-row" id="topRow"></div>
+  <div class="cards" id="cards"></div>
+
+  <div class="charts">
+    <div class="chartbox"><h3>🇯🇵 日本株 銘柄別損益（JPY）</h3><canvas id="jpBar"></canvas></div>
+    <div class="chartbox"><h3>🇯🇵 日本株 勝率</h3><canvas id="jpPie"></canvas></div>
+    <div class="chartbox"><h3>🇺🇸 米国株 銘柄別損益（USD）</h3><canvas id="usBar"></canvas></div>
+    <div class="chartbox"><h3>🇺🇸 米国株 勝率</h3><canvas id="usPie"></canvas></div>
+  </div>
+
+  <h3 style="margin:0 0 8px">📝 トレード履歴</h3>
+  <table id="tradeTable"></table>
+
+<script>
+/* ===== 既定データ（trades.csv 由来） ===== */
+const HEADERS = ["日付","市場","銘柄コード/Ticker","銘柄名","売買","数量","価格","通貨","手数料","備考"];
+let TRADES = [
+ ["2026-04-18","日本株","2222","Kotobuki Spirits Co., Ltd.","買","100","2000","JPY","",""],
+ ["2026-04-18","日本株","7203","Toyota Motor Corporation","買","100","4000","JPY","1000",""],
+ ["2026-04-18","日本株","7203","Toyota Motor Corporation","売","100","4500","JPY","1000",""],
+ ["2026/04/22","日本株","6920","Lasertec Corporation","買","100","15200","JPY","983",""],
+ ["2026/04/20","日本株","6920","Lasertec Corporation","買","100","15200","JPY","983",""],
+ ["2026/04/20","米国株","AAPL","Apple Inc.","買","100","299","USD","10",""],
+ ["2026/04/20","日本株","7203","Toyota Motor Corporation","買","100","3392","JPY","1000","上昇トレンド入りした模様"],
+ ["2026/04/20","日本株","7203","Toyota Motor Corporation","売","100","3380","JPY","1000","損切りのため"],
+].map(r => Object.fromEntries(HEADERS.map((h,i)=>[h, r[i]])));
+
+/* ===== analytics.calculate_stats() の移植 ===== */
+const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+
+function calculateStats(trades){
+  if(!trades.length) return null;
+  const rows = trades.map(t => ({...t,
+    数量: num(t["数量"]), 価格: num(t["価格"]), 手数料: num(t["手数料"]),
+    合計金額: num(t["数量"]) * num(t["価格"])
+  }));
+  const buy  = rows.filter(r => r["売買"]==="買");
+  const sell = rows.filter(r => r["売買"]==="売");
+  const codes = [...new Set(rows.map(r => r["銘柄コード/Ticker"]))];
+  const pnlList = [];
+  for(const code of codes){
+    const b = buy.filter(r => r["銘柄コード/Ticker"]===code);
+    const s = sell.filter(r => r["銘柄コード/Ticker"]===code);
+    const bt = b.reduce((a,r)=>a + r.合計金額 + r.手数料, 0);
+    const st = s.reduce((a,r)=>a + r.合計金額 - r.手数料, 0);
+    if(bt>0 && st>0){
+      const ref = rows.find(r => r["銘柄コード/Ticker"]===code);
+      pnlList.push({銘柄:code, 損益:st-bt, 市場:ref["市場"], 通貨:ref["通貨"]});
+    }
+  }
+  const empty = {win_rate:0, pf:0, total_pnl:0, avg_pnl:0, count:0};
+  const calc = cur => {
+    const c = pnlList.filter(p => p.通貨===cur);
+    if(!c.length) return empty;
+    const wins = c.filter(p=>p.損益>0), losses = c.filter(p=>p.損益<0);
+    const gp = wins.reduce((a,p)=>a+p.損益,0);
+    const gl = Math.abs(losses.reduce((a,p)=>a+p.損益,0));
+    const sum = c.reduce((a,p)=>a+p.損益,0);
+    return {
+      win_rate: Math.round(wins.length/c.length*10000)/100,
+      pf: gl>0 ? Math.round(gp/gl*100)/100 : Infinity,
+      total_pnl: Math.round(sum*100)/100,
+      avg_pnl: Math.round(sum/c.length*100)/100,
+      count: c.length
+    };
+  };
+  return {
+    total_trades: rows.length, buy_count: buy.length, sell_count: sell.length,
+    pnl_list: pnlList, jpy: calc("JPY"), usd: calc("USD")
+  };
+}
+
+/* ===== 描画 ===== */
+let chartObjs = [];
+function fmt(v, sym){ return sym==="¥" ? "¥"+Math.round(v).toLocaleString() : "$"+v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function pfLabel(pf){
+  if(pf===Infinity) return "PF: ∞ 損失なし ✅";
+  if(pf>=2.0) return `PF ${pf}：優秀 ✅`;
+  if(pf>=1.5) return `PF ${pf}：良好 👍`;
+  if(pf>=1.0) return `PF ${pf}：分岐点以上 ⚠️`;
+  return `PF ${pf}：改善が必要 ❌`;
+}
+
+function render(){
+  const s = calculateStats(TRADES);
+  chartObjs.forEach(c=>c.destroy()); chartObjs=[];
+  if(!s){ document.getElementById("topRow").innerHTML="<div class='nodata'>データがありません</div>"; return; }
+
+  /* 上部サマリー */
+  document.getElementById("topRow").innerHTML = [
+    ["📊 総トレード数", s.total_trades+" 件", "var(--text)"],
+    ["🟢 買いトレード", s.buy_count+" 件", "var(--green)"],
+    ["🔴 売りトレード", s.sell_count+" 件", "var(--red)"],
+  ].map(([l,v,c])=>`<div class="stat"><div class="label">${l}</div><div class="value" style="color:${c}">${v}</div></div>`).join("");
+
+  /* 通貨カード */
+  const card = (st, title, sym) => {
+    if(st.count===0) return `<div class="ccard"><h2>${title}</h2><div class="nodata">データなし（売買が揃った銘柄なし）</div></div>`;
+    const pc = st.total_pnl>=0 ? "var(--green)":"var(--red)";
+    const rows = [
+      ["🎯 勝率", st.win_rate+" %", "var(--yellow)"],
+      ["⚡ PF", st.pf===Infinity?"∞":st.pf, "var(--blue)"],
+      ["💰 総損益", fmt(st.total_pnl,sym), pc],
+      ["📈 平均損益", fmt(st.avg_pnl,sym), "var(--purple)"],
+      ["📊 銘柄数", st.count+" 銘柄", "var(--text)"],
+    ].map(([k,v,c])=>`<div class="crow"><span class="k">${k}</span><span class="v" style="color:${c}">${v}</span></div>`).join("");
+    return `<div class="ccard"><h2>${title}</h2>${rows}<div class="pf-eval">${pfLabel(st.pf)}</div></div>`;
+  };
+  document.getElementById("cards").innerHTML =
+    card(s.jpy,"🇯🇵 日本株（JPY）","¥") + card(s.usd,"🇺🇸 米国株（USD）","$");
+
+  /* グラフ */
+  const opt = { responsive:true, plugins:{legend:{labels:{color:"#cdd6f4"}}},
+    scales:{x:{ticks:{color:"#cdd6f4"}},y:{ticks:{color:"#cdd6f4"},grid:{color:"#3a3a4a"}}} };
+  const drawBar = (id, cur, sym) => {
+    const d = s.pnl_list.filter(p=>p.通貨===cur);
+    const ctx = document.getElementById(id);
+    if(!d.length){ chartObjs.push(new Chart(ctx,{type:"bar",data:{labels:["データなし"],datasets:[{data:[0],backgroundColor:"#3a3a4a"}]},options:opt})); return; }
+    chartObjs.push(new Chart(ctx,{type:"bar",
+      data:{labels:d.map(p=>p.銘柄),datasets:[{label:`損益(${sym})`,data:d.map(p=>p.損益),
+        backgroundColor:d.map(p=>p.損益>=0?"#a6e3a1":"#f38ba8")}]},options:opt}));
+  };
+  const drawPie = (id, cur) => {
+    const d = s.pnl_list.filter(p=>p.通貨===cur);
+    const ctx = document.getElementById(id);
+    const w=d.filter(p=>p.損益>0).length, l=d.filter(p=>p.損益<0).length, e=d.filter(p=>p.損益===0).length;
+    if(!d.length){ chartObjs.push(new Chart(ctx,{type:"doughnut",data:{labels:["データなし"],datasets:[{data:[1],backgroundColor:["#3a3a4a"]}]},options:{plugins:{legend:{labels:{color:"#cdd6f4"}}}}})); return; }
+    chartObjs.push(new Chart(ctx,{type:"doughnut",
+      data:{labels:[`勝ち(${w})`,`負け(${l})`,`引分(${e})`],
+        datasets:[{data:[w,l,e],backgroundColor:["#a6e3a1","#f38ba8","#f1fa8c"]}]},
+      options:{plugins:{legend:{labels:{color:"#cdd6f4"}}}}}));
+  };
+  drawBar("jpBar","JPY","¥"); drawPie("jpPie","JPY");
+  drawBar("usBar","USD","$"); drawPie("usPie","USD");
+
+  /* テーブル */
+  const head = "<tr>"+HEADERS.map(h=>`<th>${h}</th>`).join("")+"</tr>";
+  const body = TRADES.map(t=>"<tr>"+HEADERS.map(h=>{
+    const cls = h==="売買" ? (t[h]==="買"?"buy":t[h]==="売"?"sell":"") : "";
+    return `<td class="${cls}">${t[h]??""}</td>`;
+  }).join("")+"</tr>").join("");
+  document.getElementById("tradeTable").innerHTML = head + body;
+}
+
+/* ===== CSV 読み込み（utf-8-sig対応・簡易パーサ） ===== */
+function parseCsv(text){
+  text = text.replace(/^\uFEFF/, ""); // BOM除去
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=="");
+  const split = line => {
+    const out=[]; let cur="", q=false;
+    for(const ch of line){
+      if(ch==='"'){ q=!q; }
+      else if(ch===',' && !q){ out.push(cur); cur=""; }
+      else cur+=ch;
+    }
+    out.push(cur); return out;
+  };
+  const head = split(lines[0]);
+  return lines.slice(1).map(l=>{
+    const c = split(l);
+    return Object.fromEntries(HEADERS.map(h=>[h, c[head.indexOf(h)] ?? ""]));
+  });
+}
+function loadCsv(file){
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = e => { try{ TRADES = parseCsv(e.target.result); render(); }
+    catch(err){ alert("CSVの読み込みに失敗しました: "+err.message); } };
+  r.readAsText(file, "utf-8");
+}
+
+render();
+</script>
+</body>
+</html>

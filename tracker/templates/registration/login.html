@@ -1,0 +1,18 @@
+{% extends "tracker/base.html" %}
+{% block title %}ログイン{% endblock %}
+
+{% block content %}
+<h1>🔐 ログイン</h1>
+
+<form method="post" style="max-width:380px;">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <p style="margin-top:16px;">
+    <button type="submit" class="btn btn-primary">ログイン</button>
+  </p>
+</form>
+
+{% if form.errors %}
+<p style="color:var(--red);">ユーザー名またはパスワードが正しくありません。</p>
+{% endif %}
+{% endblock %}

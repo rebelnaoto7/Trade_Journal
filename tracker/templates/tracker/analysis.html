@@ -1,0 +1,176 @@
+﻿{% extends "tracker/base.html" %}
+{% load static %}
+{% block title %}パフォーマンス分析{% endblock %}
+
+{% block head_extra %}
+<script src="{% static 'tracker/js/chart.umd.min.js' %}"></script>
+
+<style>
+  .top-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .charts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 780px) {
+
+    .top-row,
+    .cards,
+    .charts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>📊 パフォーマンス分析</h1>
+  <span class="spacer"></span>
+  <a href="{% url 'trade_list' %}" class="btn btn--sm">← 一覧へ</a>
+</div>
+
+{% if not stats %}
+<div class="card empty">
+  <div class="icon">📭</div>
+  <p>分析するトレードがまだありません。</p>
+    {% url 'trade_create' %}トレードを登録</a>
+</div>
+{% else %}
+<div class="kpis" id="kpis"></div>
+<div class="cards-2" id="cards"></div>
+
+<div class="charts">
+  <div class="chartbox">
+    <h3>🇯🇵 日本株 実現損益（JPY）</h3><canvas id="jpBar"></canvas>
+  </div>
+  <div class="chartbox">
+    <h3>🇯🇵 日本株 勝敗</h3><canvas id="jpPie"></canvas>
+  </div>
+  <div class="chartbox">
+    <h3>🇺🇸 米国株 実現損益（USD）</h3><canvas id="usBar"></canvas>
+  </div>
+  <div class="chartbox">
+    <h3>🇺🇸 米国株 勝敗</h3><canvas id="usPie"></canvas>
+  </div>
+</div>
+
+<div id="open-positions"></div>
+
+{{ stats_data|json_script:"stats-data" }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if stats %}
+<script>
+  const s = JSON.parse(document.getElementById("stats-data").textContent);
+  const yen = v => "¥" + Math.round(v).toLocaleString();
+  const usd = v => "$" + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (v, cur) => cur === "JPY" ? yen(v) : usd(v);
+  const signClass = v => v > 0 ? "profit" : (v < 0 ? "loss" : "");
+  const pfLabel = pf => {
+    if (pf === null) return "PF ∞ — 損失なし ✅";
+    if (pf >= 2.0) return `PF ${pf} — 優秀 ✅`;
+    if (pf >= 1.5) return `PF ${pf} — 良好 👍`;
+    if (pf >= 1.0) return `PF ${pf} — 分岐点以上 ⚠️`;
+    return `PF ${pf} — 改善が必要 ❌`;
+  };
+
+  const totalJpy = s.jpy.total_pnl, totalUsd = s.usd.total_pnl;
+  document.getElementById("kpis").innerHTML = [
+    ["📊 総トレード", `${s.total_trades} 件`, ""],
+    ["🟢 買 / 🔴 売", `${s.buy_count} / ${s.sell_count}`, ""],
+    ["💴 実現損益 (JPY)", yen(totalJpy), signClass(totalJpy)],
+    ["💵 実現損益 (USD)", usd(totalUsd), signClass(totalUsd)],
+  ].map(([l, v, c]) =>
+    `<div class="kpi"><div class="label">${l}</div><div class="value ${c}">${v}</div></div>`
+  ).join("");
+
+  const card = (st, title, cur) => {
+    if (!st || st.count === 0)
+      return `<div class="ccard"><h2>${title}</h2><div class="empty" style="padding:30px 0;">決済済みトレードなし</div></div>`;
+    const rows = [
+      ["🎯 勝率", `${st.win_rate}%（${st.win_count}勝 ${st.loss_count}敗）`, ""],
+      ["⚡ PF", st.pf === null ? "∞" : st.pf, ""],
+      ["💰 実現損益", fmt(st.total_pnl, cur), signClass(st.total_pnl)],
+      ["📈 平均損益/銘柄", fmt(st.avg_pnl, cur), signClass(st.avg_pnl)],
+      ["📊 リターン率", `${st.return_pct}%`, signClass(st.return_pct)],
+      ["🔢 決済銘柄数", `${st.count} 銘柄`, ""],
+    ].map(([k, v, c]) =>
+      `<div class="crow"><span class="k">${k}</span><span class="v ${c}">${v}</span></div>`
+    ).join("");
+    return `<div class="ccard"><h2>${title}</h2>${rows}<div class="pf-eval">${pfLabel(st.pf)}</div></div>`;
+  };
+  document.getElementById("cards").innerHTML =
+    card(s.jpy, "🇯🇵 日本株（JPY）", "JPY") + card(s.usd, "🇺🇸 米国株（USD）", "USD");
+
+  Chart.defaults.color = "#a6adc8";
+  Chart.defaults.font.family = "'Meiryo UI', sans-serif";
+  const barOpt = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { grid: { color: "#2f2f47" } }, x: { grid: { display: false } } }
+  };
+  const pieOpt = { responsive: true, plugins: { legend: { position: "bottom" } } };
+
+  const emptyChart = (ctx, type) => new Chart(ctx, {
+    type, data: { labels: ["データなし"], datasets: [{ data: [1], backgroundColor: ["#2f2f47"] }] },
+    options: { plugins: { legend: { display: false } } }
+  });
+  const drawBar = (id, list) => {
+    const ctx = document.getElementById(id);
+    if (!list.length) return emptyChart(ctx, "bar");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: list.map(p => p.ticker),
+        datasets: [{
+          data: list.map(p => p.pnl),
+          backgroundColor: list.map(p => p.pnl >= 0 ? "#a6e3a1" : "#f38ba8"),
+          borderRadius: 6,
+        }]
+      },
+      options: barOpt
+    });
+  };
+  const drawPie = (id, st) => {
+    const ctx = document.getElementById(id);
+    if (!st || st.count === 0) return emptyChart(ctx, "doughnut");
+    new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: [`勝ち ${st.win_count}`, `負け ${st.loss_count}`],
+        datasets: [{ data: [st.win_count, st.loss_count], backgroundColor: ["#a6e3a1", "#f38ba8"], borderWidth: 0 }]
+      },
+      options: pieOpt
+    });
+  };
+  drawBar("jpBar", s.pnl_jpy); drawPie("jpPie", s.jpy);
+  drawBar("usBar", s.pnl_usd); drawPie("usPie", s.usd);
+
+  const fmtRow = (o, cur) =>
+    `<tr><td>${o.ticker}</td><td>${o.name || "—"}</td>
+     <td class="num">${o.qty.toLocaleString()}</td>
+     <td class="num">${fmt(o.avg_price, cur)}</td>
+     <td class="num">${fmt(o.cost, cur)}</td></tr>`;
+  const openHtml = s.open_jpy.map(o => fmtRow(o, "JPY")).join("") + s.open_usd.map(o => fmtRow(o, "USD")).join("");
+  if (openHtml) {
+    document.getElementById("open-positions").innerHTML = `
+      <div class="page-head" style="margin-top:8px;"><h1 style="font-size:1.3rem;">📦 保有中の建玉（未決済）</h1></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>コード</th><th>銘柄名</th><th class="num">数量</th><th class="num">平均取得単価</th><th class="num">取得原価</th></tr></thead>
+        <tbody>${openHtml}</tbody>
+      </table></div>`;
+  }
+</script>
+{% endif %}
+{% endblock %}

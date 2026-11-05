@@ -1,0 +1,93 @@
+﻿{% extends "tracker/base.html" %}
+{% block title %}トレード一覧{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>📝 トレード履歴</h1>
+  <span class="spacer"></span>
+  <a href="{% url 'export_csv' %}" class="btn btn--sm">⬇ CSV出力</a>
+  <a href="{% url 'analysis' %}" class="btn btn--sm">📊 分析</a>
+  <a href="{% url 'trade_create' %}" class="btn btn--primary">＋ 新規登録</a>
+</div>
+
+<form method="get" class="toolbar">
+  <input type="text" name="q" value="{{ q }}" class="input" placeholder="🔍 銘柄コード・名で検索">
+  <select name="side" class="input">
+    <option value="">売買: すべて</option>
+    <option value="買" {% if side == "買" %}selected{% endif %}>買のみ</option>
+    <option value="売" {% if side == "売" %}selected{% endif %}>売のみ</option>
+  </select>
+  <button type="submit" class="btn">絞り込み</button>
+  {% if q or side %}<a href="{% url 'trade_list' %}" class="btn btn--ghost">クリア</a>{% endif %}
+  <span class="spacer"></span>
+  <span style="color:var(--muted); font-size:.9rem;">該当 {{ total }} 件</span>
+</form>
+
+{% if page.object_list %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>約定日時</th>
+        <th>市場</th>
+        <th>コード</th>
+        <th>銘柄名</th>
+        <th>売買</th>
+        <th class="num">数量</th>
+        <th class="num">価格</th>
+        <th>通貨</th>
+        <th class="num">手数料</th>
+        <th>備考</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in page.object_list %}
+      <tr>
+        <td>{{ t.date|date:"Y-m-d H:i" }}</td>
+        <td><span class="badge {% if t.market == '日本株' %}jp{% else %}us{% endif %}">{{ t.market }}</span></td>
+        <td style="font-weight:700;">{{ t.ticker }}</td>
+        <td>{{ t.name|default:"—" }}</td>
+        <td><span class="badge {% if t.is_buy %}buy{% else %}sell{% endif %}">{{ t.side }}</span></td>
+        <td class="num">{{ t.quantity|floatformat:0 }}</td>
+        <td class="num">{{ t.price|floatformat:2 }}</td>
+        <td>{{ t.currency }}</td>
+        <td class="num">{{ t.fee|floatformat:0 }}</td>
+        <td style="max-width:180px; color:var(--text-dim);">{{ t.note|truncatechars:24 }}</td>
+        <td style="white-space:nowrap;">
+          <a href="{% url 'trade_edit' t.pk %}" class="btn btn--sm btn--ghost">編集</a>
+          <form action="{% url 'trade_delete' t.pk %}" method="post" style="display:inline; margin:0;"
+            onsubmit="return confirm('このトレードを削除しますか？');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--sm btn--danger">削除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="pagination">
+  {% if page.has_previous %}
+  <a
+    href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if side %}&side={{ side }}{% endif %}">‹
+    前</a>
+  {% endif %}
+  <span class="current">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+  <a href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if side %}&side={{ side }}{% endif %}">次
+    ›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card empty">
+  <div class="icon">🗒️</div>
+  <p>まだトレードがありません。</p>
+  <a href="{% url 'trade_create' %}" class="btn btn--primary">＋ 最初のトレードを登録</a>
+</div>
+{% endif %}
+{% endblock %}

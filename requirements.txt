@@ -1,0 +1,14 @@
+# ===== GUI =====
+tkcalendar>=1.6.1
+
+# ===== データ取得 =====
+yfinance>=0.2.40
+
+# ===== データ分析・可視化 =====
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+
+# ===== Azure Blob Storage =====
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0

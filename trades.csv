@@ -1,0 +1,9 @@
+﻿日付,市場,銘柄コード/Ticker,銘柄名,売買,数量,価格,通貨,手数料,備考
+2026-04-18,日本株,2222,"Kotobuki Spirits Co., Ltd.",買,100,2000,JPY,,
+2026-04-18,日本株,7203,Toyota Motor Corporation,買,100,4000,JPY,1000,
+2026-04-18,日本株,7203,Toyota Motor Corporation,売,100,4500,JPY,1000,
+2026/04/22,日本株,6920,Lasertec Corporation,買,100,15200,JPY,983,
+2026/04/20,日本株,6920,Lasertec Corporation,買,100,15200,JPY,983,
+2026/04/20,米国株,AAPL,Apple Inc.,買,100,299,USD,10,
+2026/04/20,日本株,7203,Toyota Motor Corporation,買,100,3392,JPY,1000,上昇トレンド入りした模様
+2026/04/20,日本株,7203,Toyota Motor Corporation,売,100,3380,JPY,1000,損切りのため

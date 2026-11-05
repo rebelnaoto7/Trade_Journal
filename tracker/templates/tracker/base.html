@@ -1,0 +1,46 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}株式トレードジャーナル{% endblock %}</title>
+  
+  {% block head_extra %}{% endblock %}
+
+  <link rel="stylesheet" href="{% static 'tracker/css/app.css' %}">
+</head>
+
+<body>
+  <nav class="nav">
+    <span class="brand">📈 トレードジャーナル</span>
+    <span class="links">
+      <a href="{% url 'trade_list' %}">一覧</a>
+      <a href="{% url 'trade_create' %}">新規登録</a>
+      <a href="{% url 'analysis' %}">分析</a>
+    </span>
+    <span class="spacer"></span>
+    {% if user.is_authenticated %}
+    <span class="user">👤 {{ user.username }}</span>
+    <form action="{% url 'logout' %}" method="post" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">ログアウト</button>
+    </form>
+    {% else %}
+    <a href="{% url 'login' %}" class="btn">ログイン</a>
+    {% endif %}
+  </nav>
+
+  <div class="container">
+    {% if messages %}
+    <ul class="messages">
+      {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>
